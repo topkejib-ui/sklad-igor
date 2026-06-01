@@ -23,8 +23,9 @@
     .dlg-f .btn{background:#f2f2f7;color:#000}.dlg-f .btn.ok{background:#007aff;color:#fff}
     .card{background:#fff;padding:14px;border-radius:12px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
     .wo-bar{position:fixed;bottom:0;left:0;right:0;background:#fff;padding:14px 16px;border-top:1px solid #d1d1d6;display:none;z-index:50}
-    #log{position:fixed;bottom:0;left:0;right:0;background:#1c1c1e;color:#fff;padding:10px;font-size:11px;max-height:120px;overflow:auto;display:none;z-index:1000}
+    #log{position:fixed;bottom:0;left:0;right:0;background:#1c1c1e;color:#fff;padding:10px;font-size:11px;max-height:150px;overflow:auto;display:none;z-index:1000}
     .qty-inp{width:40px;text-align:center;padding:4px;border:1px solid #d1d1d6;border-radius:4px}
+    .error-detail{color:#ff6b6b;font-weight:bold}
   </style>
 </head>
 <body>
@@ -105,13 +106,29 @@
     const API = 'https://script.google.com/macros/s/AKfycbz_jBd2JBYvm295EOoeYz5gbJN6zV6jKD7-krxqPirRPG8cUh5odqt4oZ3Aoofs2k32MQ/exec';
     let items = [], points = [], history = [], changed = false, curPt = null, sel = {};
     const $ = id => document.getElementById(id);
-    const log = m => { const l = $('log'); l.textContent = '['+new Date().toLocaleTimeString()+'] '+m+'\n'+l.textContent; l.style.display='block'; console.log(m); };
-    const show = (m,t='ok') => { const a=$('alert'); a.textContent=m; a.style.background=t==='err'?'#ff453a':'#30d158'; a.style.display='block'; setTimeout(()=>a.style.display='none',2500); log(m); };
+    const log = m => { 
+      const l = $('log'); 
+      const time = '['+new Date().toLocaleTimeString()+'] ';
+      l.textContent = time + m + '\n' + l.textContent; 
+      l.style.display='block'; 
+      console.log(m); 
+    };
+    const show = (m,t='ok') => { 
+      const a=$('alert'); 
+      a.textContent=m; 
+      a.style.background=t==='err'?'#ff453a':'#30d158'; 
+      a.style.display='block'; 
+      setTimeout(()=>a.style.display='none',3000); 
+      log(m); 
+    };
 
     function mark(){ changed=true; $('btnSync').className=changed?'btn btn-warn unsaved':'btn'; $('btnSync').innerHTML=changed?'🔄 ⚠️':'🔄'; }
-    function saveLocal(){ localStorage.setItem('igor_items',JSON.stringify(items)); localStorage.setItem('igor_points',JSON.stringify(points)); localStorage.setItem('igor_hist',JSON.stringify(history)); }
+    function saveLocal(){ 
+      localStorage.setItem('igor_items',JSON.stringify(items)); 
+      localStorage.setItem('igor_points',JSON.stringify(points)); 
+      localStorage.setItem('igor_hist',JSON.stringify(history)); 
+    }
 
-    // === РЕНДЕР ТОВАРОВ (только Игорь) ===
     function renderStock(){
       const q=$('search').value.toLowerCase();
       const tb=$('stockBody'); tb.innerHTML='';
@@ -126,7 +143,6 @@
       tb.querySelectorAll('.del').forEach(b=>b.onclick=()=>{ if(confirm('Удалить?')){ items=items.filter(x=>x.id!=b.dataset.id); saveLocal();mark();renderStock();show('Удалено'); }});
     }
 
-    // === ДОБАВЛЕНИЕ ТОВАРА ===
     $('btnAdd').onclick=()=>{ $('dlgItemTitle').textContent='Добавить товар'; $('choiceBox').style.display='block'; $('formItem').style.display='none'; $('dlgItem').showModal(); };
     $('choiceWater').onclick=()=>showItemForm('Вода', getExistingPrice('Вода')||35.5);
     $('choiceSugar').onclick=()=>showItemForm('Сахар', getExistingPrice('Сахар')||65);
@@ -155,7 +171,6 @@
       $('choiceBox').style.display='none'; $('formItem').style.display='block'; $('dlgItemTitle').textContent='Редактировать'; $('dlgItem').showModal();
     }
 
-    // === ТОЧКИ ===
     function renderPts(){
       const c=$('ptsList'); c.innerHTML='';
       if(!points.length){ c.innerHTML='<p style="text-align:center;color:#8e8e93">Нет точек</p>'; return; }
@@ -180,7 +195,6 @@
       saveLocal(); mark(); renderPts(); $('dlgPt').close(); show('✅ Точка сохранена');
     };
 
-    // === СПИСАНИЕ ===
     function openWriteOff(id){ curPt=id; sel={}; const p=points.find(x=>x.id==id); $('woTitle').textContent='📤 '+(p?.name||''); renderWO(); $('screen-writeoff').classList.add('active'); $('screen-points').classList.remove('active'); }
     $('btnBack').onclick=()=>{ $('screen-points').classList.add('active'); $('screen-writeoff').classList.remove('active'); $('woBar').style.display='none'; };
 
@@ -215,36 +229,65 @@
       });
     }
 
-    // === СИНХРОНИЗАЦИЯ (ОТПРАВЛЯЕТ ВСЕ ДАННЫЕ) ===
     async function sync(){
-      $('btnSync').textContent='⏳'; log('=== СИНХРОНИЗАЦИЯ (igor) ===');
+      $('btnSync').textContent='⏳'; 
+      log('=== СИНХРОНИЗАЦИЯ (igor) ===');
+      
+      if (window.location.protocol === 'file:') {
+        show('❌ Файл открыт локально! Нужен HTTPS', 'err');
+        return;
+      }
+      
       try{
         if(changed){
           log('Отправка: items='+items.length+', points='+points.length+', history='+history.length);
-          const r=await fetch(API,{method:'POST',mode:'cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({items,points,history})});
-          log('POST статус: '+r.status);
-          if(!r.ok) throw new Error('HTTP '+r.status);
-          const d=await r.json(); if(d.error) throw new Error(d.error);
+          // ✅ ИСПРАВЛЕНО: no-cors для обхода CORS preflight
+          const r = await fetch(API, {
+            method: 'POST',
+            mode: 'no-cors',
+            body: JSON.stringify({items, points, history})
+          });
+          log('POST отправлен (no-cors)');
+          // Ждём 2 секунды, чтобы Google Apps Script обработал данные
+          await new Promise(resolve => setTimeout(resolve, 2000));
         }
+        
         log('Загрузка...');
-        const r=await fetch(API+'?t='+Date.now(),{mode:'cors',cache:'no-store'});
+        const r = await fetch(API+'?t='+Date.now(), {mode: 'cors', cache: 'no-store'});
         log('GET статус: '+r.status);
         if(!r.ok) throw new Error('HTTP '+r.status);
-        const d=await r.json();
+        const d = await r.json();
         log('Получено: items='+(d.items?.length||0)+', points='+(d.points?.length||0));
         if(d.error) throw new Error(d.error);
-        items=Array.isArray(d.items)?d.items:[]; points=Array.isArray(d.points)?d.points:[]; history=Array.isArray(d.history)?d.history:[];
-        saveLocal(); renderStock(); renderPts(); renderHist(); changed=false; mark(); show('✅ Синхронизировано');
-      }catch(e){ log('❌ Ошибка: '+e.message); show('Ошибка: '+e.message,'err'); }
-      finally{ $('btnSync').innerHTML=changed?'🔄 ⚠️':'🔄'; }
+        
+        items = Array.isArray(d.items) ? d.items : []; 
+        points = Array.isArray(d.points) ? d.points : []; 
+        history = Array.isArray(d.history) ? d.history : [];
+        
+        saveLocal(); 
+        renderStock(); 
+        renderPts(); 
+        renderHist(); 
+        changed=false; 
+        mark(); 
+        show('✅ Синхронизировано');
+      } catch(e){ 
+        log('❌ Ошибка: '+e.message);
+        show('Ошибка: '+e.message, 'err');
+      } finally { 
+        $('btnSync').innerHTML = changed ? '🔄 ⚠️' : '🔄'; 
+      }
     }
-    $('btnSync').onclick=sync;
+    $('btnSync').onclick = sync;
 
-    // === СТАРТ ===
     log('Запуск igor.html...');
-    items=JSON.parse(localStorage.getItem('igor_items')||'[]'); points=JSON.parse(localStorage.getItem('igor_points')||'[]'); history=JSON.parse(localStorage.getItem('igor_hist')||'[]');
+    items = JSON.parse(localStorage.getItem('igor_items') || '[]'); 
+    points = JSON.parse(localStorage.getItem('igor_points') || '[]'); 
+    history = JSON.parse(localStorage.getItem('igor_hist') || '[]');
     log('Локально: items='+items.length+', points='+points.length);
-    renderStock(); renderPts(); renderHist();
+    renderStock(); 
+    renderPts(); 
+    renderHist();
     sync();
   </script>
 </body>
