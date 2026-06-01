@@ -1,0 +1,147 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>📦 Игорь</title>
+  <style>
+    body{font-family:-apple-system,sans-serif;margin:0;background:#f2f2f7;padding-bottom:20px}
+    .nav{position:sticky;top:0;background:#007aff;color:#fff;padding:12px 16px;display:flex;justify-content:space-between;align-items:center}
+    .btn{background:rgba(255,255,255,.2);border:none;color:#fff;padding:6px 12px;border-radius:8px}
+    .btn:active{opacity:.7}.btn-warn{background:#ff9f0a;color:#000}.btn-pt{background:#fff;color:#007aff;padding:8px 14px;font-weight:600}
+    .screen{display:none;padding:16px}.screen.active{display:block}
+    input,select{width:100%;padding:12px;border:1px solid #d1d1d6;border-radius:10px;font-size:16px;margin:8px 0}
+    table{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden}
+    th{background:#e5e5ea;font-size:13px;color:#8e8e93;padding:12px 8px;text-align:left}
+    td{padding:12px 8px;border-top:1px solid #f2f2f7;font-size:15px}
+    .badge{padding:4px 8px;border-radius:6px;font-size:13px;font-weight:600;color:#fff}
+    .bg-ok{background:#30d158}.bg-warn{background:#ff9f0a}.bg-err{background:#ff453a}.bg-sec{background:#8e8e93}
+    dialog{border:none;border-radius:16px;padding:0;width:92%;max-width:400px;background:#fff}
+    dialog::backdrop{background:rgba(0,0,0,.4)}.dlg-h{padding:16px;border-bottom:1px solid #f2f2f7;font-weight:600}.dlg-b{padding:16px}
+    .dlg-f{padding:16px;border-top:1px solid #f2f2f7;display:flex;justify-content:flex-end;gap:8px}
+    .dlg-f .btn{background:#f2f2f7;color:#000}.dlg-f .btn.ok{background:#007aff;color:#fff}
+    .card{background:#fff;padding:16px;border-radius:12px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+    .wo-bar{position:fixed;bottom:0;left:0;right:0;background:#fff;padding:14px 16px;border-top:1px solid #d1d1d6;display:none;z-index:50}
+    #log{position:fixed;bottom:0;left:0;right:0;background:#1c1c1e;color:#fff;padding:10px;font-size:11px;max-height:120px;overflow:auto;display:none}
+    .qty-inp{width:40px;text-align:center;padding:4px;border:1px solid #d1d1d6;border-radius:4px}
+  </style>
+</head>
+<body>
+  <nav class="nav"><div class="nav-brand">📦 Игорь</div><button class="btn" id="btnSync">🔄</button></nav>
+  <div id="alert" style="padding:10px 16px;background:#30d158;color:#fff;text-align:center;display:none"></div>
+
+  <!-- ТОВАРЫ -->
+  <div id="screen-stock" class="screen active">
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px">
+      <h3 style="margin:0;font-size:20px">Товары</h3>
+      <button id="btnAdd" class="btn" style="background:#30d158;color:#000;margin-left:auto">➕ Вода/Сахар</button>
+    </div>
+    <input id="search" type="search" placeholder="🔍 Поиск..." style="margin-bottom:12px">
+    <table><thead><tr><th>Название</th><th style="text-align:center">Ост.</th><th>Цена</th><th></th></tr></thead><tbody id="stockBody"></tbody></table>
+    <p style="text-align:center;color:#8e8e93;font-size:12px;margin-top:12px">✏️ Только Вода и Сахар доступны для правки</p>
+  </div>
+
+  <!-- ТОЧКИ -->
+  <div id="screen-points" class="screen">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <h3 style="margin:0;font-size:20px">🏪 Точки</h3>
+      <button id="btnAddPt" class="btn btn-pt">➕ Добавить точку</button>
+    </div>
+    <p style="color:#8e8e93;font-size:14px;margin-bottom:12px">Нажмите на карточку точки, чтобы списать товар</p>
+    <div id="ptsList"></div>
+  </div>
+
+  <!-- СПИСАНИЕ -->
+  <div id="screen-writeoff" class="screen">
+    <button id="btnBack" class="btn" style="background:#e5e5ea;color:#000;margin-bottom:12px;width:100%">← Назад к точкам</button>
+    <h3 id="woTitle" style="margin-bottom:12px">📤 Списание</h3>
+    <table><thead><tr><th>Товар</th><th style="text-align:center">Ост.</th><th style="text-align:center">Выбрать</th></tr></thead><tbody id="woBody"></tbody></table>
+  </div>
+  <div id="woBar" class="wo-bar"><div style="display:flex;justify-content:space-between;align-items:center"><span>Выбрано: <b id="selCnt">0</b> шт.</span><button id="btnConfirm" class="btn ok" style="background:#ff9f0a;color:#000;padding:10px 14px">✅ Подтвердить</button></div></div>
+
+  <!-- ИСТОРИЯ -->
+  <div id="screen-history" class="screen"><h3>История</h3><div id="histList"></div></div>
+
+  <!-- МОДАЛКА: ДОБАВИТЬ ТОВАР -->
+  <dialog id="dlgItem"><div class="dlg-h" id="dlgItemTitle">Добавить</div>
+    <div id="choiceBox" style="padding:16px">
+      <button id="choiceWater" style="width:100%;padding:14px;margin-bottom:8px;background:#f2f2f7;border:none;border-radius:10px;font-size:17px;text-align:left">💧 Вода</button>
+      <button id="choiceSugar" style="width:100%;padding:14px;background:#f2f2f7;border:none;border-radius:10px;font-size:17px;text-align:left">🍚 Сахар</button>
+    </div>
+    <form id="formItem" class="dlg-b" style="display:none">
+      <input type="hidden" id="fItemId"><input type="hidden" id="fItemName">
+      <label style="display:block;margin-bottom:6px;color:#8e8e93;font-size:14px">Товар</label><input id="fItemDisplay" readonly style="background:#f2f2f7;margin-bottom:12px">
+      <label style="display:block;margin-bottom:6px;color:#8e8e93;font-size:14px">Количество *</label><input type="number" id="fItemQty" min="1" value="1" required style="margin-bottom:12px">
+      <label style="display:block;margin-bottom:6px;color:#8e8e93;font-size:14px">Цена (₽)</label><input type="number" id="fItemPrice" min="0" step="0.01" style="margin-bottom:12px">
+      <div class="dlg-f" style="padding:0;border:none;margin-top:8px"><button type="button" id="btnBackItem" class="btn">Назад</button><button type="submit" class="btn ok">💾 Сохранить</button></div>
+    </form>
+  </dialog>
+
+  <!-- МОДАЛКА: ТОЧКА -->
+  <dialog id="dlgPt"><div class="dlg-h" id="dlgPtTitle">Точка</div>
+    <form id="formPt" class="dlg-b">
+      <input type="hidden" id="pId">
+      <label style="display:block;margin-bottom:6px;color:#8e8e93;font-size:14px">Название точки *</label><input id="pName" required style="margin-bottom:12px" placeholder="Например: Киоск на Ленина">
+      <label style="display:block;margin-bottom:6px;color:#8e8e93;font-size:14px">Адрес / Примечание</label><input id="pAddr" style="margin-bottom:12px">
+      <div class="dlg-f" style="padding:0;border:none;margin-top:8px"><button type="button" onclick="this.closest('dialog').close()" class="btn">Отмена</button><button type="submit" class="btn ok">💾 Сохранить</button></div>
+    </form>
+  </dialog>
+  <div id="log"></div>
+
+  <script>
+    const API = 'https://script.google.com/macros/s/AKfycbxw6Al9rEMUpJBsm3Zbz6DwhOOp3vEFPn_5oO0eqxAH9sokgBh4v3-zhtLTcvLaA7IlCA/exec';
+    let items=[], points=[], history=[], changed=false, curPt=null, sel={};
+    const $=id=>document.getElementById(id);
+    const log=m=>{const l=$('log'); l.textContent='['+new Date().toLocaleTimeString()+'] '+m+'\n'+l.textContent; l.style.display='block';};
+    const show=(m,t='ok')=>{const a=$('alert'); a.textContent=m; a.style.background=t==='err'?'#ff453a':'#30d158'; a.style.display='block'; setTimeout(()=>a.style.display='none',2500); log(m);};
+    function mark(){changed=true; $('btnSync').className=changed?'btn btn-warn':'btn';}
+    function saveLocal(){localStorage.setItem('igor_items',JSON.stringify(items));localStorage.setItem('igor_points',JSON.stringify(points));localStorage.setItem('igor_hist',JSON.stringify(history));}
+
+    function renderStock(){
+      const q=$('search').value.toLowerCase(), tb=$('stockBody'); tb.innerHTML='';
+      const list=items.filter(i=>i.warehouse==='Игорь'&&(i.name?.toLowerCase().includes(q)));
+      if(!list.length){tb.innerHTML='<tr><td colspan="4" style="text-align:center;padding:24px;color:#8e8e93">Нет товаров</td></tr>';return;}
+      list.forEach(i=>{
+        const cls=i.quantity<=0?'bg-err':i.quantity<=5?'bg-warn':'bg-ok';
+        const isEditable=(i.name==='Вода'||i.name==='Сахар');
+        const btns=isEditable?`<button class="edit" data-id="${i.id}" style="background:none;border:none;font-size:18px;margin-right:6px">✏️</button><button class="del" data-id="${i.id}" style="background:none;border:none;font-size:18px">🗑️</button>`:`<span style="color:#8e8e93;font-size:12px">🔒 только чтение</span>`;
+        tb.innerHTML+=`<tr><td>${i.name||'-'}</td><td style="text-align:center"><span class="badge ${cls}">${i.quantity??0}</span></td><td>${Number(i.price||0).toFixed(2)}₽</td><td>${btns}</td></tr>`;
+      });
+      tb.querySelectorAll('.edit').forEach(b=>b.onclick=()=>{const it=items.find(x=>x.id==b.dataset.id); if(!it)return; $('fItemId').value=it.id; $('fItemName').value=it.name; $('fItemDisplay').value=it.name; $('fItemQty').value=it.quantity; $('fItemPrice').value=it.price||''; $('choiceBox').style.display='none'; $('formItem').style.display='block'; $('dlgItemTitle').textContent='Редактировать'; $('dlgItem').showModal();});
+      tb.querySelectorAll('.del').forEach(b=>b.onclick=()=>{if(confirm('Удалить?')){items=items.filter(x=>x.id!=b.dataset.id);saveLocal();mark();renderStock();show('Удалено');}});
+    }
+
+    $('btnAdd').onclick=()=>{$('dlgItemTitle').textContent='Добавить'; $('choiceBox').style.display='block'; $('formItem').style.display='none'; $('dlgItem').showModal();};
+    $('choiceWater').onclick=()=>showItemForm('Вода', getPrice('Вода')||35.5);
+    $('choiceSugar').onclick=()=>showItemForm('Сахар', getPrice('Сахар')||65);
+    $('btnBackItem').onclick=()=>{$('choiceBox').style.display='block'; $('formItem').style.display='none'; $('dlgItemTitle').textContent='Добавить';};
+    function getPrice(n){const ex=items.find(i=>i.name===n&&i.warehouse==='Игорь'); return ex?.price;}
+    function showItemForm(n,p){$('fItemId').value=''; $('fItemName').value=n; $('fItemDisplay').value=n; $('fItemQty').value='1'; $('fItemPrice').value=p??''; $('choiceBox').style.display='none'; $('formItem').style.display='block'; $('dlgItemTitle').textContent=n;}
+    $('formItem').onsubmit=e=>{e.preventDefault(); const n=$('fItemName').value,q=+$('fItemQty').value,p=+$('fItemPrice').value||0; if(q<=0)return show('Кол-во > 0','err'); const ex=items.find(i=>i.name===n&&i.warehouse==='Игорь'); if(ex){ex.quantity+=q; if(p)ex.price=p;} else{items.push({id:Date.now(),name:n,warehouse:'Игорь',quantity:q,price:p});} saveLocal();mark();renderStock();$('dlgItem').close();$('choiceBox').style.display='block';$('formItem').style.display='none';show('✅ '+n);};
+
+    function renderPts(){const c=$('ptsList'); c.innerHTML=''; if(!points.length){c.innerHTML='<p style="text-align:center;color:#8e8e93">Нет точек</p>';return;} points.forEach(p=>{c.innerHTML+=`<div class="card" data-id="${p.id}"><div style="display:flex;justify-content:space-between;align-items:center"><b>🏪 ${p.name||'-'}</b><div><button class="pt-edit" data-id="${p.id}" style="background:none;border:none;font-size:16px">✏️</button><button class="pt-del" data-id="${p.id}" style="background:none;border:none;font-size:16px">🗑️</button></div></div>${p.addr?`<div style="color:#8e8e93;font-size:13px;margin-top:4px">${p.addr}</div>`:''}</div>`;}); c.querySelectorAll('.card').forEach(el=>el.onclick=e=>{if(!e.target.closest('button'))openWriteOff(el.dataset.id);}); c.querySelectorAll('.pt-edit').forEach(b=>b.onclick=e=>{e.stopPropagation(); const p=points.find(x=>x.id==b.dataset.id); $('pId').value=p.id; $('pName').value=p.name; $('pAddr').value=p.addr||''; $('dlgPtTitle').textContent='Редактировать'; $('dlgPt').showModal();}); c.querySelectorAll('.pt-del').forEach(b=>b.onclick=e=>{e.stopPropagation(); if(confirm('Удалить точку?')){points=points.filter(p=>p.id!=b.dataset.id);saveLocal();mark();renderPts();show('Удалено');}});}
+    
+    $('btnAddPt').onclick=()=>{$('pId').value=''; $('pName').value=''; $('pAddr').value=''; $('dlgPtTitle').textContent='➕ Новая точка'; $('dlgPt').showModal(); setTimeout(()=>$('pName').focus(), 300);};
+    $('formPt').onsubmit=e=>{e.preventDefault(); const id=$('pId').value,n=$('pName').value.trim(),a=$('pAddr').value.trim(); if(!n)return show('Введите название','err'); if(id){const p=points.find(x=>x.id==id);if(p){p.name=n;p.addr=a;}}else{points.push({id:Date.now(),name:n,addr:a});} saveLocal();mark();renderPts();$('dlgPt').close();show('✅ Точка добавлена');};
+
+    function openWriteOff(id){curPt=id;sel={};const p=points.find(x=>x.id==id);$('woTitle').textContent='📤 '+(p?.name||'');renderWO();$('screen-writeoff').classList.add('active');$('screen-points').classList.remove('active');}
+    $('btnBack').onclick=()=>{$('screen-points').classList.add('active');$('screen-writeoff').classList.remove('active');$('woBar').style.display='none';};
+    function renderWO(){const tb=$('woBody');tb.innerHTML='';const list=items.filter(i=>i.warehouse==='Игорь');if(!list.length){tb.innerHTML='<tr><td colspan="3" style="text-align:center;padding:24px;color:#8e8e93">Нет</td></tr';$('woBar').style.display='none';return;}list.forEach(i=>{const s=sel[i.id]||0;tb.innerHTML+=`<tr><td>${i.name||'-'}</td><td style="text-align:center"><span class="badge ${i.quantity<0?'bg-err':'bg-sec'}">${i.quantity??0}</span></td><td style="text-align:center"><button class="qty" data-act="-" data-id="${i.id}" ${s<=0?'disabled':''}>−</button><input type="number" class="qty-inp" data-id="${i.id}" value="${s}" onfocus="this.blur()"><button class="qty" data-act="+" data-id="${i.id}">+</button></td></tr>`;});tb.querySelectorAll('.qty').forEach(b=>b.onclick=()=>{let c=sel[b.dataset.id]||0;c+=b.dataset.act==='+'?1:-1;if(c<0)c=0;c==0?delete sel[b.dataset.id]:sel[b.dataset.id]=c;renderWO();});const t=Object.values(sel).reduce((s,q)=>s+q,0);$('selCnt').textContent=t;$('btnConfirm').disabled=t==0;$('woBar').style.display=t>0?'block':'none';}
+    $('btnConfirm').onclick=()=>{const t=Object.values(sel).reduce((s,q)=>s+q,0);if(!t||!curPt)return;if(!confirm(`Списать ${t} шт.?`))return;const op=Object.entries(sel).map(([id,q])=>{const it=items.find(i=>i.id==id);if(it)it.quantity-=parseInt(q);return{id:it?.id,name:it?.name,qty:parseInt(q)};}).filter(x=>x.id);saveLocal();mark();const pt=points.find(p=>p.id==curPt);history.unshift({id:Date.now(),date:new Date().toISOString(),pointId:curPt,pointName:pt?.name,items:op,totalQty:t});saveLocal();show('✅ Списано '+t);$('woBar').style.display='none';sel={};$('btnBack').click();renderStock();};
+
+    function renderHist(){const c=$('histList');c.innerHTML='';if(!history.length){c.innerHTML='<p style="color:#8e8e93">Пусто</p>';return;}history.forEach(h=>{const itms=typeof h.items==='string'?JSON.parse(h.items):(h.items||[]);c.innerHTML+=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><b>🏪 ${h.pointName||'-'}</b><span class="badge bg-warn">${h.totalQty||0} шт.</span></div><div style="color:#8e8e93;font-size:13px;margin-top:4px">${new Date(h.date).toLocaleString('ru-RU')}</div><div style="margin-top:8px;border-top:1px solid #f2f2f7;padding-top:6px">${itms.map(i=>`<div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:4px"><span>${i.name||'-'}</span><span>${i.qty??0} шт.</span></div>`).join('')}</div></div>`;});}
+
+    async function sync(){
+      $('btnSync').textContent='⏳'; log('Синхронизация...');
+      try{
+        if(changed){log('Отправка...'); const res=await fetch(API,{method:'POST',body:JSON.stringify({items,points,history})}); const d=await res.json(); if(d.error)throw new Error(d.error); log('✅ Записано'); await new Promise(r=>setTimeout(r,2000));}
+        log('Загрузка...'); const res=await fetch(API); const d=await res.json(); if(d.error)throw new Error(d.error); items=Array.isArray(d.items)?d.items:[]; points=Array.isArray(d.points)?d.points:[]; history=Array.isArray(d.history)?d.history:[]; saveLocal(); renderStock(); renderPts(); renderHist(); changed=false; show('✅ Готово ('+items.length+' тов., '+points.length+' точ.)');
+      }catch(e){log('❌ '+e.message); show('Ошибка: '+e.message,'err');}
+      finally{$('btnSync').textContent=changed?'🔄 ⚠️':'🔄';}
+    }
+    $('btnSync').onclick=sync;
+    items=JSON.parse(localStorage.getItem('igor_items')||'[]'); points=JSON.parse(localStorage.getItem('igor_points')||'[]'); history=JSON.parse(localStorage.getItem('igor_hist')||'[]');
+    log('Локально: '+items.length+' тов., '+points.length+' точ.'); renderStock(); renderPts(); renderHist(); sync();
+  </script>
+</body>
+</html>
