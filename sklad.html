@@ -1,0 +1,397 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>📦 Склад</title>
+<style>
+html { font-size: 15px; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin:0; background:#f2f2f7; padding-bottom:40px; }
+* { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+nav { position:sticky; top:0; background:#007aff; color:#fff; padding:12px 14px; display:flex; justify-content:space-between; align-items:center; z-index:100; }
+.nav-brand { font-weight:700; font-size:1.15rem; }
+.nav-btn { background:rgba(255,255,255,.2); border:none; color:#fff; padding:8px 10px; border-radius:8px; font-size:.95rem; margin-left:5px; font-weight:600; }
+.nav-btn:active { opacity:.7; background:rgba(255,255,255,.35); }
+.nav-btn.active { background:#fff; color:#007aff; font-weight:700; }
+
+.screen { display:none; padding:14px; }
+.screen.active { display:block; }
+h2 { font-size:1.25rem; font-weight:700; margin:0 0 8px 0; color:#111; }
+p { font-size:.9rem; color:#666; margin:6px 0 12px 0; }
+
+input, select { width:100%; padding:10px 12px; border:1.5px solid #ccc; border-radius:10px; font-size:1rem; margin:6px 0; background:#fff; }
+input:focus, select:focus { outline:none; border-color:#007aff; box-shadow:0 0 0 2px rgba(0,122,255,.15); }
+
+table { width:100%; border-collapse:separate; border-spacing:0; background:#fff; border-radius:12px; overflow:hidden; margin-top:8px; box-shadow:0 1px 4px rgba(0,0,0,.05); }
+th { background:#f0f0f5; font-size:.8rem; color:#555; padding:10px 8px; text-align:left; font-weight:600; }
+td { padding:10px 8px; border-top:1px solid #f5f5f7; font-size:.95rem; vertical-align:middle; }
+
+.badge { padding:4px 8px; border-radius:6px; font-size:.85rem; font-weight:700; color:#fff; display:inline-block; }
+.bg-ok { background:#30d158; } .bg-warn { background:#ff9f0a; } .bg-err { background:#ff453a; }
+
+.card { background:#fff; padding:12px; border-radius:12px; margin-bottom:10px; box-shadow:0 1px 4px rgba(0,0,0,.05); }
+
+.btn-green { background:#30d158; color:#000; font-weight:600; padding:12px; border:none; border-radius:10px; font-size:1rem; width:100%; margin:10px 0; }
+.btn-blue { background:#007aff; color:#fff; font-weight:600; padding:12px; border:none; border-radius:10px; font-size:1rem; width:100%; margin:10px 0; }
+.btn-gray { background:#e5e5ea; color:#000; padding:12px; border:none; border-radius:10px; font-size:1rem; width:100%; margin:6px 0; }
+
+.modal { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,.4); z-index:200; align-items:center; justify-content:center; padding:16px; }
+.modal.open { display:flex; }
+.modal-box { background:#fff; border-radius:14px; padding:16px; width:100%; max-width:380px; max-height:90vh; overflow-y:auto; box-shadow:0 8px 24px rgba(0,0,0,.12); }
+.modal-h { font-weight:700; font-size:1.15rem; margin-bottom:10px; padding-bottom:8px; border-bottom:1.5px solid #f2f2f7; }
+.modal-f { display:flex; justify-content:flex-end; gap:8px; margin-top:12px; padding-top:12px; border-top:1.5px solid #f2f2f7; }
+
+.qty-wrap { display:flex; align-items:center; justify-content:center; gap:8px; }
+.qty-btn { width:44px; height:44px; background:#fff; border:1.5px solid #d1d1d6; border-radius:10px; font-size:1.5rem; font-weight:700; color:#007aff; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+.qty-btn:active { background:#007aff; color:#fff; border-color:#007aff; }
+.qty-btn:disabled { opacity:.3; cursor:default; background:#f9f9f9; border-color:#eee; color:#aaa; }
+
+.qty-inp { width:60px; height:44px; text-align:center; border:1.5px solid #d1d1d6; border-radius:10px; font-size:1.15rem; font-weight:700; margin:0; padding:0; -moz-appearance:textfield; background:#fafafa; }
+.qty-inp::-webkit-outer-spin-button, .qty-inp::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+
+#alert { display:none; padding:12px 16px; background:#30d158; color:#fff; text-align:center; font-size:.95rem; font-weight:600; position:fixed; top:55px; left:12px; right:12px; border-radius:10px; z-index:300; }
+#alert.err { background:#ff453a; }
+.bar { display:none; position:fixed; bottom:0; left:0; right:0; background:#fff; padding:14px 16px; border-top:1.5px solid #d1d1d6; z-index:50; box-shadow:0 -2px 10px rgba(0,0,0,.08); }
+.reorder-panel { background:#fff0cc; padding:10px; border-radius:10px; margin-bottom:8px; display:none; justify-content:space-between; align-items:center; border:1px solid #ffe082; }
+</style>
+</head>
+<body>
+<nav>
+  <div class="nav-brand">📦 Склад</div>
+  <div>
+    <button class="nav-btn active" data-tab="stock">📋</button>
+    <button class="nav-btn" data-tab="points">☕</button>
+    <button class="nav-btn" data-tab="transfer">📦</button>
+    <button class="nav-btn" data-tab="writeoff">📤</button>
+    <button class="nav-btn" id="btnSync">🔄</button>
+  </div>
+</nav>
+<div id="alert"></div>
+
+<div id="tab-stock" class="screen active">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px">
+    <h2 style="margin:0;font-size:1.25rem">Товары</h2>
+    <div style="display:flex;gap:8px">
+      <button id="btnReorder" class="btn-blue" style="width:auto;margin:0;padding:8px 12px;font-size:.9rem" onclick="window.toggleReorder()">📋 Порядок</button>
+      <button class="nav-btn" style="background:#30d158;color:#000" onclick="window.openNewItem()">➕ Новый</button>
+    </div>
+  </div>
+  <div id="reorderPanel" class="reorder-panel">
+    <span>Режим порядка: двигайте товары стрелками</span>
+    <button class="btn-green" style="width:auto;margin:0;padding:6px 12px" onclick="window.saveReorder()">✅ Сохранить</button>
+  </div>
+  <select id="whFilter" onchange="window.renderStock()">
+    <option value="">🌍 Все склады</option>
+    <option value="Игорь">📦 Игорь</option>
+    <option value="Основной">🏭 Основной</option>
+  </select>
+  <table id="stockTable"><thead></thead><tbody id="sBody"></tbody></table>
+</div>
+
+<div id="tab-points" class="screen">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+    <h2 style="margin:0;font-size:1.25rem">☕ Точки</h2>
+    <button class="nav-btn" style="background:#30d158;color:#000" onclick="window.openPointModal()">➕ Точка</button>
+  </div>
+  <select id="ptOwnerFilter" onchange="window.renderPoints()"><option value="all">🌍 Все точки</option><option value="igor">☕ Точки Игоря</option><option value="my">👤 Мои точки</option></select>
+  <div id="pList"></div>
+</div>
+
+<div id="tab-transfer" class="screen">
+  <h2 style="margin:0 0 8px 0;font-size:1.25rem">📦 Перемещение</h2>
+  <select id="trFrom" onchange="window.renderTR()"><option value="Игорь">Со склада: Игорь</option><option value="Основной" selected>Со склада: Основной</option></select>
+  <select id="trTo" onchange="window.renderTR()"><option value="Игорь">На склад: Игорь</option><option value="Основной">На склад: Основной</option></select>
+  <table><thead><tr><th>Название</th><th style="text-align:center">Ост.</th><th style="text-align:center">Выбрать</th></tr></thead><tbody id="trBody"></tbody></table>
+</div>
+<div id="trBar" class="bar">
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <span>Переместить: <b id="trCnt">0</b> шт.</span>
+    <button class="btn-green" style="width:auto;margin:0" onclick="window.confirmTransfer()">✅ Переместить</button>
+  </div>
+</div>
+
+<div id="tab-writeoff" class="screen">
+  <h2 style="margin:0 0 8px 0;font-size:1.25rem">📤 Списание на точку</h2>
+  <select id="woPoint" onchange="window.renderWO()"><option value="">Выберите точку...</option></select>
+  <select id="woWh" onchange="window.renderWO()"><option value="Игорь">Склад: Игорь</option><option value="Основной" selected>Склад: Основной</option></select>
+  <table><thead><tr><th>Товар</th><th style="text-align:center">Ост.</th><th style="text-align:center">Выбрать</th></tr></thead><tbody id="woBody"></tbody></table>
+</div>
+<div id="woBar" class="bar">
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <span>Выбрано: <b id="selCnt">0</b> шт.</span>
+    <button class="btn-green" style="width:auto;margin:0" onclick="window.confirmWO()">✅ Подтвердить</button>
+  </div>
+</div>
+
+<div id="tab-history" class="screen">
+  <h2 style="margin:0 0 12px 0;font-size:1.25rem">История</h2>
+  <div id="hList"></div>
+</div>
+
+<div id="mItem" class="modal">
+  <div class="modal-box">
+    <div class="modal-h" id="mItemTitle">Товар</div>
+    <input type="hidden" id="fId">
+    <input id="fName" placeholder="Название *" style="margin-bottom:8px">
+    <select id="fWh" style="margin-bottom:8px"><option>Игорь</option><option>Основной</option></select>
+    <input type="number" id="fQty" placeholder="Количество *" style="margin-bottom:8px">
+    <input type="number" id="fPrice" min="0" step="0.01" placeholder="Цена (₽)" style="margin-bottom:8px">
+    <div class="modal-f"><button class="btn-gray" style="width:auto" onclick="window.closeModal('mItem')">Отмена</button><button class="btn-blue" style="width:auto" onclick="window.saveItem()">💾</button></div>
+  </div>
+</div>
+
+<div id="mPoint" class="modal">
+  <div class="modal-box">
+    <div class="modal-h" id="mPtTitle">Точка</div>
+    <input type="hidden" id="pId"><input id="pName" placeholder="Название *" style="margin-bottom:8px">
+    <select id="pOwner" style="margin-bottom:8px"><option value="igor">☕ Точка Игоря</option><option value="my">👤 Моя точка</option></select>
+    <input id="pAddr" placeholder="Адрес" style="margin-bottom:8px">
+    <div class="modal-f"><button class="btn-gray" style="width:auto" onclick="window.closeModal('mPoint')">Отмена</button><button class="btn-blue" style="width:auto" onclick="window.savePoint()">💾</button></div>
+  </div>
+</div>
+
+<script>
+const API='https://script.google.com/macros/s/AKfycbxw6Al9rEMUpJBsm3Zbz6DwhOOp3vEFPn_5oO0eqxAH9sokgBh4v3-zhtLTcvLaA7IlCA/exec';
+let items=[],points=[],history=[],changed=false,woSel={},trSel={},reorderMode=false, editingGroup=null;
+const $=id=>document.getElementById(id);
+const alert=(m,e)=>{const a=$('alert');a.textContent=m;a.className=e?'err':'';a.style.display='block';setTimeout(()=>a.style.display='none',2000);};
+const mark=()=>{changed=true;$('btnSync').style.background='#ff9f0a';$('btnSync').textContent='⚠️';};
+const saveLocal=()=>{localStorage.setItem('sklad_items',JSON.stringify(items));localStorage.setItem('sklad_points',JSON.stringify(points));localStorage.setItem('sklad_hist',JSON.stringify(history));};
+
+window.showTab=n=>{
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  $('tab-'+n).classList.add('active');
+  document.querySelectorAll('.nav-btn[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===n));
+  $('woBar').style.display='none'; $('trBar').style.display='none';
+  if(n==='stock')window.renderStock(); 
+  if(n==='points')window.renderPoints(); 
+  if(n==='transfer')window.renderTR(); 
+  if(n==='writeoff'){window.fillWOPoints();window.renderWO();} 
+  if(n==='history')window.renderHistory();
+}
+document.querySelectorAll('.nav-btn[data-tab]').forEach(b=>b.addEventListener('click',()=>window.showTab(b.dataset.tab)));
+
+// === ПОРЯДОК ===
+window.toggleReorder=()=>{
+  reorderMode=!reorderMode;
+  const btn=$('btnReorder');
+  if(reorderMode){btn.style.background='#ff9f0a';btn.style.color='#000';btn.innerHTML='✅ Сохранить порядок';$('reorderPanel').style.display='flex';}
+  else{btn.style.background='#007aff';btn.style.color='#fff';btn.innerHTML='📋 Порядок';$('reorderPanel').style.display='none';}
+  window.renderStock();
+}
+window.moveItemStock=(idx,dir)=>{const newIdx=idx+dir;if(newIdx<0||newIdx>=items.length)return;[items[idx],items[newIdx]]=[items[newIdx],items[idx]];window.renderStock();}
+window.saveReorder=()=>{items.forEach((it,i)=>it.order=i);saveLocal();mark();reorderMode=false;window.toggleReorder();window.renderStock();alert('✅ Порядок сохранен');}
+
+// === ТОВАРЫ (ИСПРАВЛЕННАЯ ЛОГИКА) ===
+window.renderStock=()=>{
+  const wh=$('whFilter').value, showCol=(wh==='');
+  $('stockTable').querySelector('thead').innerHTML=`<tr><th>Название</th>${showCol?'<th>Склад</th>':''}<th style="text-align:center">Ост.</th><th>Цена</th><th></th></tr>`;
+  const tb=$('sBody'); tb.innerHTML='';
+  
+  // 1. СТРОГАЯ ФИЛЬТРАЦИЯ: берем только нужный склад или все
+  const pool = wh ? items.filter(i=>i.warehouse===wh) : items;
+  
+  // 2. ГРУППИРОВКА: объединяем дубликаты по имени
+  const groups = {};
+  pool.forEach(i=>{
+    if(!groups[i.name]) groups[i.name] = { items: [], totalQty: 0 };
+    groups[i.name].items.push(i);
+    groups[i.name].totalQty += (i.quantity || 0);
+  });
+  
+  // 3. СОЗДАНИЕ СПИСКА ДЛЯ ОТРИСОВКИ
+  const list = Object.keys(groups).map(name => {
+    const g = groups[name];
+    const main = g.items[0];
+    return { 
+      name, 
+      warehouse: main.warehouse, 
+      quantity: g.totalQty, 
+      price: main.price||0, 
+      order: main.order||0, 
+      count: g.items.length, 
+      id: main.id 
+    };
+  }).sort((a,b) => (a.order||0) - (b.order||0));
+  
+  if(!list.length){ tb.innerHTML=`<tr><td colspan="${showCol?5:4}" style="text-align:center;padding:20px;color:#888">Нет товаров</td></tr>`; return; }
+  
+  // 4. РЕНДЕР ТАБЛИЦЫ
+  list.forEach(i=>{
+    const safeName = i.name.replace(/'/g, "&#39;");
+    const realIdx = items.findIndex(x => x.id === i.id);
+    const rb = reorderMode ? `<span onclick="window.moveItemStock(${realIdx},-1)" style="cursor:pointer;margin-right:4px">⬆️</span><span onclick="window.moveItemStock(${realIdx},1)" style="cursor:pointer;margin-right:4px">⬇️</span>` : '';
+    const cls = i.quantity<=0?'bg-err':i.quantity<=5?'bg-warn':'bg-ok';
+    tb.innerHTML+=`<tr><td>${i.name}</td>${showCol?`<td><small>${i.warehouse}</small></td>`:''}<td style="text-align:center"><span class="badge ${cls}">${i.quantity}</span></td><td>${Number(i.price||0).toFixed(2)}₽</td><td>${rb}<span onclick="window.openEdit('${safeName}','${i.warehouse}')" style="cursor:pointer;margin-right:8px">✏️</span><span onclick="window.deleteGroup('${safeName}','${i.warehouse}')" style="cursor:pointer">🗑️</span></td></tr>`;
+  });
+}
+
+window.openNewItem=()=>{
+  $('fId').value=''; $('fName').value=''; $('fWh').value='Основной'; $('fQty').value=''; $('fPrice').value='';
+  $('mItemTitle').textContent='Новый товар';
+  window.editingGroup = null; 
+  $('mItem').classList.add('open');
+}
+
+window.openEdit=(name, warehouse)=>{
+  const matches = items.filter(i => i.name === name && i.warehouse === warehouse);
+  if(!matches.length) return;
+  
+  let totalQty = 0;
+  matches.forEach(m => totalQty += (m.quantity || 0));
+  
+  $('fId').value = ''; 
+  $('fName').value = name;
+  $('fWh').value = warehouse;
+  $('fQty').value = totalQty; 
+  $('fPrice').value = matches[0].price || '';
+  $('mItemTitle').textContent = `Редактировать (${matches.length} шт.)`;
+  
+  window.editingGroup = { name, warehouse };
+  $('mItem').classList.add('open');
+}
+
+window.saveItem=()=>{
+  const n=$('fName').value.trim(), wh=$('fWh').value, q=parseFloat($('fQty').value)||0, p=parseFloat($('fPrice').value)||0;
+  if(!n) return alert('Введите название',1);
+
+  if(window.editingGroup){
+    const {name: targetName, warehouse: targetWh} = window.editingGroup;
+    let indices = [];
+    items.forEach((it, idx) => {
+      if(it.name === targetName && it.warehouse === targetWh) indices.push(idx);
+    });
+    
+    if(indices.length > 0){
+      items[indices[0]].name = n;
+      items[indices[0]].warehouse = wh;
+      items[indices[0]].quantity = q;
+      items[indices[0]].price = p;
+      for(let i = indices.length - 1; i > 0; i--) items.splice(indices[i], 1);
+    }
+    window.editingGroup = null;
+  } else {
+    items.push({id:Date.now(),name:n,warehouse:wh,quantity:q,price:p,order:items.length});
+  }
+  
+  saveLocal(); mark(); window.renderStock(); window.closeModal('mItem'); alert('✅ Сохранено');
+}
+
+window.deleteGroup=(name, warehouse)=>{
+  const safeName = name.replace(/&#39;/g, "'");
+  if(confirm('Удалить товар "'+safeName+'" полностью?')) {
+    items = items.filter(i => !(i.name === safeName && i.warehouse === warehouse));
+    saveLocal(); mark(); window.renderStock(); alert('Удалено');
+  }
+}
+
+// === ТОЧКИ ===
+window.renderPoints=()=>{
+  const of=$('ptOwnerFilter').value, c=$('pList'); c.innerHTML='';
+  const list=points.filter(p=>of==='all'||p.owner===of);
+  if(!list.length){c.innerHTML='<p style="text-align:center;color:#888;padding:20px">Нет точек</p>';return;}
+  list.forEach(p=>{
+    const icon=p.owner==='my'?'👤':'☕';
+    c.innerHTML+=`<div class="card" onclick="window.openPointModal(${p.id})"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:1rem">${icon} ${p.name||'-'}</b><span onclick="event.stopPropagation();window.delPoint(${p.id})" style="cursor:pointer;font-size:1.1rem">🗑️</span></div><div style="color:#666;font-size:.9rem;margin-top:4px">${p.addr||'Без адреса'}</div></div>`;
+  });
+}
+window.openPointModal=id=>{
+  $('pId').value=id?String(id):'';
+  if(id){const p=points.find(x=>x.id===id);$('pName').value=p.name;$('pOwner').value=p.owner||'igor';$('pAddr').value=p.addr||'';$('mPtTitle').textContent='Редактировать';}
+  else{$('pName').value='';$('pOwner').value='igor';$('pAddr').value='';$('mPtTitle').textContent='Новая точка';}
+  $('mPoint').classList.add('open');
+}
+window.savePoint=()=>{
+  const rawId=$('pId').value, id=rawId?Number(rawId):null, n=$('pName').value.trim(), own=$('pOwner').value, a=$('pAddr').value.trim();
+  if(!n)return alert('Введите название',1);
+  if(id){const p=points.find(x=>x.id===id);if(p){p.name=n;p.owner=own;p.addr=a;p.visible=true;}}
+  else{points.push({id:Date.now(),name:n,owner:own,addr:a,visible:true});}
+  saveLocal();mark();window.renderPoints();window.closeModal('mPoint');alert('✅ Точка сохранена');
+}
+window.delPoint=id=>{if(confirm('Удалить?')){points=points.filter(p=>p.id!==id);saveLocal();mark();window.renderPoints();alert('Удалено');}}
+
+// === ПЕРЕМЕЩЕНИЕ ===
+window.renderTR=()=>{
+  const tb=$('trBody');tb.innerHTML='';trSel={};
+  const from=$('trFrom').value,to=$('trTo').value;
+  if(from===to){tb.innerHTML='<tr><td colspan="3" style="text-align:center;padding:20px;color:#888">Выберите разные склады</td></tr';$('trBar').style.display='none';return;}
+  const list=items.filter(i=>i.warehouse===from);
+  if(!list.length){tb.innerHTML='<tr><td colspan="3" style="text-align:center;padding:20px">Нет товаров</td></tr';$('trBar').style.display='none';return;}
+  list.forEach(i=>{
+    const s=trSel[i.id]||0;
+    tb.innerHTML+=`<tr><td>${i.name}</td><td style="text-align:center"><span class="badge ${i.quantity<0?'bg-err':i.quantity<=5?'bg-warn':'bg-ok'}">${i.quantity}</span></td><td style="text-align:center"><div class="qty-wrap"><button type="button" class="qty-btn" onclick="window.trBtn(${i.id},-1)">−</button><input type="tel" class="qty-inp" data-id="${i.id}" value="${s}" inputmode="numeric" oninput="window.trInput(this)"><button type="button" class="qty-btn" onclick="window.trBtn(${i.id},1)">+</button></div></td></tr>`;
+  });
+  window.updTR();
+}
+window.trBtn=(id,d)=>{let c=trSel[id]||0;c+=d;if(c<0)c=0;trSel[id]=c;const inp=document.querySelector(`.qty-inp[data-id="${id}"]`);if(inp)inp.value=c;window.updTR();}
+window.trInput=el=>{const id=el.dataset.id;let v=el.value===''?0:parseFloat(el.value);if(isNaN(v))v=0;trSel[id]=v;window.updTR();}
+window.updTR=()=>{const t=Object.values(trSel).reduce((s,q)=>s+q,0);$('trCnt').textContent=t;$('trBar').style.display=(t!==0)?'block':'none';}
+window.confirmTransfer=()=>{
+  const from=$('trFrom').value,to=$('trTo').value,t=Object.values(trSel).reduce((s,q)=>s+q,0);
+  if(t===0)return;if(!confirm(`Переместить ${t} шт. с "${from}" на "${to}"?`))return;
+  Object.entries(trSel).forEach(([id,q])=>{
+    const src=items.find(i=>i.id==id&&i.warehouse===from);if(!src)return;
+    src.quantity-=parseFloat(q);
+    let dest=items.find(i=>i.name===src.name&&i.warehouse===to&&i.price===src.price);
+    if(dest)dest.quantity+=parseFloat(q);
+    else items.push({id:Date.now(),name:src.name,warehouse:to,quantity:parseFloat(q),price:src.price,order:items.length});
+  });
+  saveLocal();mark();trSel={};$('trFrom').value=from;$('trTo').value=to;window.renderTR();alert('✅ Перемещено');
+}
+
+// === СПИСАНИЕ ===
+window.fillWOPoints=()=>{const s=$('woPoint');s.innerHTML='<option value="">Выберите точку...</option>';points.forEach(p=>s.innerHTML+=`<option value="${p.id}">${p.name}</option>`);}
+window.renderWO=()=>{
+  const tb=$('woBody');tb.innerHTML='';woSel={};
+  const pt=$('woPoint').value,wh=$('woWh').value;
+  if(!pt){$('woBar').style.display='none';return;}
+  const list=items.filter(i=>i.warehouse===wh);
+  if(!list.length){tb.innerHTML='<tr><td colspan="3" style="text-align:center;padding:20px">Нет товаров</td></tr';$('woBar').style.display='none';return;}
+  list.forEach(i=>{
+    const s=woSel[i.id]||0;
+    tb.innerHTML+=`<tr><td>${i.name}</td><td style="text-align:center"><span class="badge ${i.quantity<0?'bg-err':i.quantity<=5?'bg-warn':'bg-ok'}">${i.quantity}</span></td><td style="text-align:center"><div class="qty-wrap"><button type="button" class="qty-btn" onclick="window.woBtn(${i.id},-1)">−</button><input type="tel" class="qty-inp" data-id="${i.id}" value="${s}" inputmode="numeric" oninput="window.woInput(this)"><button type="button" class="qty-btn" onclick="window.woBtn(${i.id},1)">+</button></div></td></tr>`;
+  });
+  window.updWO();
+}
+window.woBtn=(id,d)=>{let c=woSel[id]||0;c+=d;if(c<0)c=0;woSel[id]=c;const inp=document.querySelector(`.qty-inp[data-id="${id}"]`);if(inp)inp.value=c;window.updWO();}
+window.woInput=el=>{const id=el.dataset.id;let v=el.value===''?0:parseFloat(el.value);if(isNaN(v))v=0;woSel[id]=v;window.updWO();}
+window.updWO=()=>{const t=Object.values(woSel).reduce((s,q)=>s+q,0);$('selCnt').textContent=t;$('woBar').style.display=(t!==0)?'block':'none';}
+window.confirmWO=()=>{
+  const pt=$('woPoint').value,wh=$('woWh').value,t=Object.values(woSel).reduce((s,q)=>s+q,0);
+  if(!pt||t===0)return;if(!confirm(`Списать ${t} шт. на "${points.find(x=>x.id==pt).name}" со склада "${wh}"?`))return;
+  const op=Object.entries(woSel).map(([id,q])=>{const it=items.find(i=>i.id==id&&i.warehouse===wh);if(it)it.quantity-=parseFloat(q);return{id:it?.id,name:it?.name,qty:parseFloat(q)};}).filter(x=>x.id);
+  saveLocal();mark();const p=points.find(x=>x.id==pt);history.unshift({id:Date.now(),date:new Date().toISOString(),pointId:pt,pointName:p.name,items:op,totalQty:t,warehouse:wh});saveLocal();
+  alert('✅ Списано '+t);$('woBar').style.display='none';woSel={};$('woPoint').value='';window.renderWO();
+}
+
+window.renderHistory=()=>{
+  const c=$('hList');c.innerHTML='';
+  if(!history.length){c.innerHTML='<p style="color:#888;text-align:center;padding:20px">Пусто</p>';return;}
+  history.forEach(h=>{
+    const itms=typeof h.items==='string'?JSON.parse(h.items):(h.items||[]);
+    const pt=points.find(x=>x.id==h.pointId);
+    const icon=pt?.owner==='my'?'👤':'☕';
+    c.innerHTML+=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:1rem">${icon} ${h.pointName||'-'}</b><span class="badge bg-warn">${h.totalQty||0} шт.</span></div><div style="color:#666;font-size:.9rem;margin-top:4px">${new Date(h.date).toLocaleString('ru-RU')} | Склад: ${h.warehouse||'-'}</div><div style="margin-top:8px;border-top:1.5px solid #f2f2f7;padding-top:6px">${itms.map(i=>`<div style="display:flex;justify-content:space-between;font-size:.95rem;margin-bottom:4px"><span>${i.name||'-'}</span><span>${i.qty} шт.</span></div>`).join('')}</div></div>`;
+  });
+}
+window.closeModal=id=>$(id).classList.remove('open');
+
+async function sync(){
+  $('btnSync').textContent='⏳';
+  try{
+    if(changed){const r=await fetch(API,{method:'POST',body:JSON.stringify({items,points,history})});const d=await r.json();if(d.error)throw new Error(d.error);await new Promise(r=>setTimeout(r,2000));}
+    const r=await fetch(API);const d=await r.json();if(d.error)throw new Error(d.error);
+    items=Array.isArray(d.items)?d.items:[];points=Array.isArray(d.points)?d.points:[];history=Array.isArray(d.history)?d.history:[];
+    saveLocal();window.renderStock();window.renderPoints();window.renderHistory();changed=false;alert('✅ Готово');
+  }catch(e){alert('Ошибка: '+e.message,1);}
+  finally{$('btnSync').textContent=changed?'⚠️':'🔄';$('btnSync').style.background=changed?'#ff9f0a':'rgba(255,255,255,.2)';}
+}
+$('btnSync').addEventListener('click',sync);
+
+items=JSON.parse(localStorage.getItem('sklad_items')||'[]');points=JSON.parse(localStorage.getItem('sklad_points')||'[]');history=JSON.parse(localStorage.getItem('sklad_hist')||'[]');
+window.renderStock();window.renderPoints();window.renderHistory();window.fillWOPoints();sync();
+</script>
+</body>
+</html>
