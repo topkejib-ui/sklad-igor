@@ -1,0 +1,485 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>📦 Склад</title>
+<style>
+html { font-size: 15px; }
+body { font-family: -apple-system, sans-serif; margin:0; background:#f2f2f7; padding-bottom:40px; }
+* { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+nav { position:sticky; top:0; background:#007aff; color:#fff; padding:10px 12px; display:flex; justify-content:space-between; align-items:center; z-index:100; }
+.nav-brand { font-weight:700; font-size:1.1rem; }
+.nav-btn { background:rgba(255,255,255,.2); border:none; color:#fff; padding:6px 8px; border-radius:6px; font-size:.9rem; margin-left:4px; }
+.nav-btn:active { opacity:.7; }
+.nav-btn.active { background:#fff; color:#007aff; font-weight:700; }
+
+.screen { display:none; padding:12px; padding-bottom: 60px; }
+.screen.active { display:block; }
+h2 { font-size:1.2rem; font-weight:700; margin:0 0 8px 0; }
+p { font-size:.85rem; color:#666; margin:4px 0 10px 0; }
+
+input, select { width:100%; padding:8px 10px; border:1px solid #ccc; border-radius:8px; font-size:1rem; margin:4px 0; background:#fff; }
+table { width:100%; border-collapse:collapse; background:#fff; border-radius:8px; overflow:hidden; margin-top:6px; }
+th { background:#f0f0f5; font-size:.75rem; color:#555; padding:8px 6px; text-align:left; }
+td { padding:8px 6px; border-top:1px solid #eee; font-size:.9rem; vertical-align:middle; }
+
+.badge { padding:3px 6px; border-radius:4px; font-size:.8rem; font-weight:700; color:#fff; }
+.bg-ok { background:#30d158; } .bg-warn { background:#ff9f0a; } .bg-err { background:#ff453a; }
+
+.card { background:#fff; padding:10px; border-radius:10px; margin-bottom:8px; box-shadow:0 1px 2px rgba(0,0,0,.05); }
+
+.btn-green { background:#30d158; color:#000; font-weight:600; padding:10px; border:none; border-radius:8px; font-size:1rem; width:100%; margin:8px 0; }
+.btn-blue { background:#007aff; color:#fff; font-weight:600; padding:10px; border:none; border-radius:8px; font-size:1rem; width:100%; margin:8px 0; }
+.btn-gray { background:#e5e5ea; color:#000; padding:10px; border:none; border-radius:8px; font-size:1rem; width:100%; margin:4px 0; }
+
+/* КНОПКИ ПОРЯДКА */
+.move-btn {
+  display:inline-block; 
+  width:32px; height:32px; line-height:30px; text-align:center;
+  background:#fff; border:1px solid #007aff; border-radius:6px;
+  font-size:16px; color:#007aff; cursor:pointer; margin-right:4px;
+  font-weight:bold;
+}
+.move-btn:active { background:#007aff; color:#fff; }
+.move-btn.disabled { opacity:0.3; pointer-events:none; border-color:#ccc; color:#ccc; }
+
+.modal { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,.4); z-index:200; align-items:center; justify-content:center; padding:16px; }
+.modal.open { display:flex; }
+.modal-box { background:#fff; border-radius:12px; padding:14px; width:100%; max-width:360px; max-height:90vh; overflow-y:auto; }
+.modal-h { font-weight:700; font-size:1.1rem; margin-bottom:8px; border-bottom:1px solid #eee; padding-bottom:6px; }
+.modal-f { display:flex; justify-content:flex-end; gap:6px; margin-top:10px; padding-top:10px; border-top:1px solid #eee; }
+
+#alert { display:none; padding:10px 14px; background:#30d158; color:#fff; text-align:center; font-size:.9rem; position:fixed; top:50px; left:10px; right:10px; border-radius:8px; z-index:300; }
+#alert.err { background:#ff453a; }
+.bar { display:none; position:fixed; bottom:0; left:0; right:0; background:#fff; padding:12px; border-top:1px solid #ddd; z-index:50; }
+</style>
+</head>
+<body>
+<nav>
+  <div class="nav-brand">📦 Склад</div>
+  <div>
+    <button class="nav-btn active" data-tab="stock">📋</button>
+    <button class="nav-btn" data-tab="points">☕</button>
+    <button class="nav-btn" data-tab="transfer">📦</button>
+    <button class="nav-btn" data-tab="writeoff">📤</button>
+    <button class="nav-btn" id="btnSync">🔄</button>
+  </div>
+</nav>
+<div id="alert"></div>
+
+<!-- ТОВАРЫ -->
+<div id="tab-stock" class="screen active">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+    <h2 style="margin:0">Товары</h2>
+    <div style="display:flex;gap:6px">
+      <button id="btnReorder" class="btn-blue" style="width:auto;margin:0;padding:6px 10px;font-size:.85rem" onclick="toggleReorder()">📋 Порядок</button>
+      <button class="nav-btn" style="background:#30d158;color:#000" onclick="openNewItem()">➕ Новый</button>
+    </div>
+  </div>
+  <select id="whFilter" onchange="renderStock()"><option value="">🌍 Все</option><option value="Игорь">📦 Игорь</option><option value="Основной">🏭 Основной</option></select>
+  <table id="stockTable"><thead></thead><tbody id="sBody"></tbody></table>
+</div>
+
+<!-- ТОЧКИ -->
+<div id="tab-points" class="screen">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+    <h2 style="margin:0">☕ Точки</h2>
+    <button class="nav-btn" style="background:#30d158;color:#000" onclick="openPointModal()">➕</button>
+  </div>
+  <select id="ptOwnerFilter" onchange="renderPoints()"><option value="all">Все</option><option value="igor">Игоря</option><option value="my">Мои</option></select>
+  <div id="pList"></div>
+</div>
+
+<!-- ПЕРЕМЕЩЕНИЕ -->
+<div id="tab-transfer" class="screen">
+  <h2 style="margin:0 0 6px 0">📦 Перемещение</h2>
+  <select id="trFrom" onchange="renderTR()"><option value="Игорь">От: Игорь</option><option value="Основной" selected>От: Основной</option></select>
+  <select id="trTo" onchange="renderTR()"><option value="Игорь">На: Игорь</option><option value="Основной">На: Основной</option></select>
+  <table><thead><tr><th>Товар</th><th style="text-align:center">Ост.</th><th style="text-align:center">Кол-во</th></tr></thead><tbody id="trBody"></tbody></table>
+</div>
+<div id="trBar" class="bar">
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <span>Переместить: <b id="trCnt">0</b></span>
+    <button class="btn-green" style="width:auto;margin:0" onclick="confirmTransfer()">✅</button>
+  </div>
+</div>
+
+<!-- СПИСАНИЕ -->
+<div id="tab-writeoff" class="screen">
+  <h2 style="margin:0 0 6px 0">📤 Списание</h2>
+  <select id="woPoint" onchange="renderWO()"><option value="">Выберите точку...</option></select>
+  <select id="woWh" onchange="renderWO()"><option value="Игорь">Склад: Игорь</option><option value="Основной" selected>Склад: Основной</option></select>
+  <table><thead><tr><th>Товар</th><th style="text-align:center">Ост.</th><th style="text-align:center">Кол-во</th></tr></thead><tbody id="woBody"></tbody></table>
+</div>
+<div id="woBar" class="bar">
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <span>Выбрано: <b id="selCnt">0</b></span>
+    <button class="btn-green" style="width:auto;margin:0" onclick="confirmWO()">✅</button>
+  </div>
+</div>
+
+<!-- ИСТОРИЯ -->
+<div id="tab-history" class="screen">
+  <h2 style="margin:0 0 10px 0">История</h2>
+  <div id="hList"></div>
+</div>
+
+<!-- МОДАЛКИ -->
+<div id="mItem" class="modal">
+  <div class="modal-box">
+    <div class="modal-h" id="mItemTitle">Товар</div>
+    <input type="hidden" id="fId">
+    <input id="fName" placeholder="Название *" style="margin-bottom:6px">
+    <select id="fWh" style="margin-bottom:6px"><option>Игорь</option><option>Основной</option></select>
+    <input type="number" id="fQty" placeholder="Количество *" style="margin-bottom:6px">
+    <input type="number" id="fPrice" placeholder="Цена" step="0.01" style="margin-bottom:6px">
+    <div class="modal-f"><button class="btn-gray" style="width:auto" onclick="closeModal('mItem')">Отмена</button><button class="btn-blue" style="width:auto" onclick="saveItem()">💾</button></div>
+  </div>
+</div>
+
+<div id="mPoint" class="modal">
+  <div class="modal-box">
+    <div class="modal-h" id="mPtTitle">Точка</div>
+    <input type="hidden" id="pId"><input id="pName" placeholder="Название *" style="margin-bottom:6px">
+    <select id="pOwner" style="margin-bottom:6px"><option value="igor">Игоря</option><option value="my">Моя</option></select>
+    <input id="pAddr" placeholder="Адрес" style="margin-bottom:6px">
+    <div class="modal-f"><button class="btn-gray" style="width:auto" onclick="closeModal('mPoint')">Отмена</button><button class="btn-blue" style="width:auto" onclick="savePoint()">💾</button></div>
+  </div>
+</div>
+
+<script>
+const API='https://script.google.com/macros/s/AKfycbxw6Al9rEMUpJBsm3Zbz6DwhOOp3vEFPn_5oO0eqxAH9sokgBh4v3-zhtLTcvLaA7IlCA/exec';
+let items=[],points=[],history=[],changed=false,trSel={},woSel={}, editingGroup=null, reorderMode=false;
+const $=id=>document.getElementById(id);
+const alert=(m,e)=>{const a=$('alert');a.textContent=m;a.className=e?'err':'';a.style.display='block';setTimeout(()=>a.style.display='none',2000);};
+const mark=()=>{changed=true;$('btnSync').style.background='#ff9f0a';$('btnSync').textContent='⚠️';};
+const saveLocal=()=>{localStorage.setItem('sklad_items',JSON.stringify(items));localStorage.setItem('sklad_points',JSON.stringify(points));localStorage.setItem('sklad_hist',JSON.stringify(history));};
+
+window.showTab=n=>{
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  $('tab-'+n).classList.add('active');
+  document.querySelectorAll('.nav-btn[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===n));
+  $('woBar').style.display='none'; $('trBar').style.display='none';
+  if(n==='stock')renderStock(); 
+  if(n==='points')renderPoints(); 
+  if(n==='transfer')renderTR(); 
+  if(n==='writeoff'){fillWOPoints();renderWO();} 
+  if(n==='history')renderHistory();
+}
+document.querySelectorAll('.nav-btn[data-tab]').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
+
+// === УПРАВЛЕНИЕ ПОРЯДКОМ (ПО ID) ===
+window.toggleReorder=()=>{
+  reorderMode=!reorderMode;
+  const btn=$('btnReorder');
+  if(reorderMode){btn.style.background='#ff9f0a';btn.style.color='#000';btn.innerHTML='✅ Сохранить';}
+  else{btn.style.background='#007aff';btn.style.color='#fff';btn.innerHTML='📋 Порядок';}
+  renderStock();
+}
+
+// Перемещает товар по его уникальному ID
+window.moveItemById=(itemId, direction) => {
+  // Находим текущий индекс товара с этим ID
+  const idx = items.findIndex(i => i.id == itemId);
+  if (idx === -1) return;
+
+  const newIdx = idx + direction;
+  
+  // Проверка границ
+  if (newIdx < 0 || newIdx >= items.length) return;
+  
+  // Меняем местами элементы в массиве items
+  [items[idx], items[newIdx]] = [items[newIdx], items[idx]];
+  
+  // Обновляем порядок для всех элементов
+  saveOrderSilently();
+  
+  // Перерисовываем таблицу
+  renderStock();
+}
+
+function saveOrderSilently() {
+  items.forEach((it, i) => it.order = i);
+  saveLocal();
+  mark();
+}
+
+// === ТОВАРЫ ===
+window.renderStock=()=>{
+  const wh=$('whFilter').value, showCol=(wh==='');
+  $('stockTable').querySelector('thead').innerHTML=`<tr><th>Название</th>${showCol?'<th>Склад</th>':''}<th style="text-align:center">Ост.</th><th>Цена</th><th></th></tr>`;
+  const tb=$('sBody'); tb.innerHTML='';
+  
+  // Сначала сортируем items по order, чтобы отображать в правильном порядке
+  items.sort((a,b) => (a.order||0) - (b.order||0));
+  
+  const pool = wh ? items.filter(i=>i.warehouse===wh) : items;
+  
+  // Группируем для отображения суммы, но сохраняем порядок из items
+  const seen = new Set();
+  const list = [];
+  
+  // Проходим по отсортированному pool, чтобы сохранить порядок групп
+  pool.forEach(item => {
+    if (!seen.has(item.name)) {
+      seen.add(item.name);
+      // Находим все товары с этим именем в pool для суммы
+      const allSameName = pool.filter(i => i.name === item.name);
+      const totalQty = allSameName.reduce((sum, i) => sum + (i.quantity || 0), 0);
+      
+      list.push({
+        name: item.name,
+        warehouse: item.warehouse,
+        quantity: totalQty,
+        price: item.price || 0,
+        id: item.id // Используем уникальный ID для кнопок
+      });
+    }
+  });
+  
+  if(!list.length){ tb.innerHTML=`<tr><td colspan="${showCol?5:4}" style="text-align:center;padding:16px;color:#888">Пусто</td></tr>`; return; }
+  
+  list.forEach((i)=>{
+    const safeName = i.name.replace(/'/g, "&#39;");
+    const cls = i.quantity<=0?'bg-err':i.quantity<=5?'bg-warn':'bg-ok';
+    
+    // Кнопки порядка
+    let orderControls = '';
+    if(reorderMode) {
+      // Находим текущий индекс этого ID в массиве items
+      const currentIdx = items.findIndex(it => it.id == i.id);
+      const canMoveUp = currentIdx > 0;
+      const canMoveDown = currentIdx < items.length - 1;
+      
+      const upClass = canMoveUp ? '' : 'disabled';
+      const downClass = canMoveDown ? '' : 'disabled';
+      
+      // Передаем ID товара, а не индекс
+      orderControls = `
+        <span class="move-btn ${upClass}" onclick="moveItemById(${i.id}, -1)">⬆️</span>
+        <span class="move-btn ${downClass}" onclick="moveItemById(${i.id}, 1)">⬇️</span>
+      `;
+    }
+    
+    const priceStr = Number(i.price).toFixed(2);
+    
+    tb.innerHTML+=`<tr>
+      <td>${i.name}</td>
+      ${showCol?`<td><small>${i.warehouse}</small></td>`:''}
+      <td style="text-align:center"><span class="badge ${cls}">${i.quantity}</span></td>
+      <td>${priceStr}</td>
+      <td>
+        ${orderControls}
+        <span onclick="openEdit('${safeName}','${i.warehouse}')" style="cursor:pointer;margin-left:6px">✏️</span>
+        <span onclick="deleteGroup('${safeName}','${i.warehouse}')" style="cursor:pointer;margin-left:4px">🗑️</span>
+      </td>
+    </tr>`;
+  });
+}
+
+window.openNewItem=()=>{
+  $('fId').value=''; $('fName').value=''; $('fWh').value='Основной'; $('fQty').value=''; $('fPrice').value='';
+  $('mItemTitle').textContent='Новый товар';
+  editingGroup = null; 
+  $('mItem').classList.add('open');
+}
+
+window.openEdit=(name, warehouse)=>{
+  const matches = items.filter(i => i.name === name && i.warehouse === warehouse);
+  if(!matches.length) return;
+  let totalQty = 0;
+  matches.forEach(m => totalQty += (m.quantity || 0));
+  
+  $('fId').value = ''; $('fName').value = name; $('fWh').value = warehouse;
+  $('fQty').value = totalQty; $('fPrice').value = matches[0].price || '';
+  $('mItemTitle').textContent = 'Изменить остаток';
+  editingGroup = { name, warehouse };
+  $('mItem').classList.add('open');
+}
+
+window.saveItem=()=>{
+  const n=$('fName').value.trim(), wh=$('fWh').value, q=parseFloat($('fQty').value)||0, p=parseFloat($('fPrice').value)||0;
+  if(!n) return alert('Введите имя',1);
+
+  if(editingGroup){
+    const {name: targetName, warehouse: targetWh} = editingGroup;
+    let indices = [];
+    items.forEach((it, idx) => { if(it.name === targetName && it.warehouse === targetWh) indices.push(idx); });
+    if(indices.length > 0){
+      items[indices[0]].quantity = q; items[indices[0]].price = p;
+      for(let i = indices.length - 1; i > 0; i--) items.splice(indices[i], 1);
+    }
+    editingGroup = null;
+  } else {
+    items.push({id:Date.now(),name:n,warehouse:wh,quantity:q,price:p,order:items.length});
+  }
+  saveLocal(); mark(); renderStock(); closeModal('mItem'); alert('✅ OK');
+}
+
+window.deleteGroup=(name, warehouse)=>{
+  const safeName = name.replace(/&#39;/g, "'");
+  if(confirm('Удалить '+safeName+'?')) {
+    items = items.filter(i => !(i.name === safeName && i.warehouse === warehouse));
+    saveLocal(); mark(); renderStock(); alert('Удалено');
+  }
+}
+
+// === ТОЧКИ ===
+window.renderPoints=()=>{
+  const of=$('ptOwnerFilter').value, c=$('pList'); c.innerHTML='';
+  const list=points.filter(p=>of==='all'||p.owner===of);
+  if(!list.length){c.innerHTML='<p style="text-align:center;color:#888;padding:16px">Нет точек</p>';return;}
+  list.forEach(p=>{
+    const icon=p.owner==='my'?'👤':'☕';
+    c.innerHTML+=`<div class="card" onclick="openPointModal(${p.id})"><div style="display:flex;justify-content:space-between;align-items:center"><b>${icon} ${p.name||'-'}</b><span onclick="event.stopPropagation();delPoint(${p.id})" style="font-size:1.1rem">🗑️</span></div><div style="color:#666;font-size:.85rem;margin-top:2px">${p.addr||''}</div></div>`;
+  });
+}
+window.openPointModal=id=>{
+  $('pId').value=id?String(id):'';
+  if(id){const p=points.find(x=>x.id===id);$('pName').value=p.name;$('pOwner').value=p.owner||'igor';$('pAddr').value=p.addr||'';$('mPtTitle').textContent='Точка';}
+  else{$('pName').value='';$('pOwner').value='igor';$('pAddr').value='';$('mPtTitle').textContent='Новая точка';}
+  $('mPoint').classList.add('open');
+}
+window.savePoint=()=>{
+  const rawId=$('pId').value, id=rawId?Number(rawId):null, n=$('pName').value.trim(), own=$('pOwner').value, a=$('pAddr').value.trim();
+  if(!n)return alert('Имя?',1);
+  if(id){const p=points.find(x=>x.id===id);if(p){p.name=n;p.owner=own;p.addr=a;}}
+  else{points.push({id:Date.now(),name:n,owner:own,addr:a});}
+  saveLocal();mark();renderPoints();closeModal('mPoint');alert('✅ OK');
+}
+window.delPoint=id=>{if(confirm('Удалить?')){points=points.filter(p=>p.id!==id);saveLocal();mark();renderPoints();alert('Удалено');}}
+
+// === ПЕРЕМЕЩЕНИЕ (РАБОТАЕТ) ===
+window.renderTR=()=>{
+  const tb=$('trBody');tb.innerHTML='';trSel={};
+  const from=$('trFrom').value,to=$('trTo').value;
+  if(from===to){tb.innerHTML='<tr><td colspan="3" style="text-align:center;padding:16px">Выберите разные</td></tr';$('trBar').style.display='none';return;}
+  const list=items.filter(i=>i.warehouse===from);
+  if(!list.length){tb.innerHTML='<tr><td colspan="3" style="text-align:center;padding:16px">Пусто</td></tr';$('trBar').style.display='none';return;}
+  list.forEach(i=>{
+    const s=trSel[i.id]||0;
+    tb.innerHTML+=`<tr>
+      <td>${i.name}</td>
+      <td style="text-align:center">${i.quantity}</td>
+      <td style="text-align:center">
+        <div style="display:flex;justify-content:center;gap:6px">
+          <button type="button" class="btn-gray" style="width:30px;margin:0;padding:4px" onclick="updateTR(${i.id}, -1)">-</button>
+          <input type="tel" id="tr-inp-${i.id}" style="width:40px;text-align:center;margin:0" value="${s}" oninput="updateTRInput(${i.id}, this.value)">
+          <button type="button" class="btn-gray" style="width:30px;margin:0;padding:4px" onclick="updateTR(${i.id}, 1)">+</button>
+        </div>
+      </td>
+    </tr>`;
+  });
+  updTR();
+}
+
+window.updateTR=(id, delta)=>{
+  let c=trSel[id]||0;
+  c+=delta;
+  if(c<0)c=0;
+  trSel[id]=c;
+  const inp=$(`tr-inp-${id}`);
+  if(inp) inp.value=c;
+  updTR();
+}
+window.updateTRInput=(id, val)=>{
+  let v=parseInt(val);
+  if(isNaN(v)) v=0;
+  if(v<0) v=0;
+  trSel[id]=v;
+  updTR();
+}
+window.updTR=()=>{const t=Object.values(trSel).reduce((s,q)=>s+q,0);$('trCnt').textContent=t;$('trBar').style.display=(t!==0)?'block':'none';}
+window.confirmTransfer=()=>{
+  const from=$('trFrom').value,to=$('trTo').value,t=Object.values(trSel).reduce((s,q)=>s+q,0);
+  if(t===0)return;if(!confirm(`Переместить ${t}?`))return;
+  Object.entries(trSel).forEach(([id,q])=>{
+    const src=items.find(i=>i.id==id&&i.warehouse===from);if(!src)return;
+    src.quantity-=parseFloat(q);
+    let dest=items.find(i=>i.name===src.name&&i.warehouse===to);
+    if(dest)dest.quantity+=parseFloat(q);
+    else items.push({id:Date.now(),name:src.name,warehouse:to,quantity:parseFloat(q),price:src.price,order:items.length});
+  });
+  saveLocal();mark();trSel={};renderTR();alert('✅ OK');
+}
+
+// === СПИСАНИЕ (РАБОТАЕТ) ===
+window.fillWOPoints=()=>{const s=$('woPoint');s.innerHTML='<option value="">Точка...</option>';points.forEach(p=>s.innerHTML+=`<option value="${p.id}">${p.name}</option>`);}
+window.renderWO=()=>{
+  const tb=$('woBody');tb.innerHTML='';woSel={};
+  const pt=$('woPoint').value,wh=$('woWh').value;
+  if(!pt){$('woBar').style.display='none';return;}
+  const list=items.filter(i=>i.warehouse===wh);
+  if(!list.length){tb.innerHTML='<tr><td colspan="3" style="text-align:center;padding:16px">Пусто</td></tr';$('woBar').style.display='none';return;}
+  list.forEach(i=>{
+    const s=woSel[i.id]||0;
+    tb.innerHTML+=`<tr>
+      <td>${i.name}</td>
+      <td style="text-align:center">${i.quantity}</td>
+      <td style="text-align:center">
+        <div style="display:flex;justify-content:center;gap:6px">
+          <button type="button" class="btn-gray" style="width:30px;margin:0;padding:4px" onclick="updateWO(${i.id}, -1)">-</button>
+          <input type="tel" id="wo-inp-${i.id}" style="width:40px;text-align:center;margin:0" value="${s}" oninput="updateWOInput(${i.id}, this.value)">
+          <button type="button" class="btn-gray" style="width:30px;margin:0;padding:4px" onclick="updateWO(${i.id}, 1)">+</button>
+        </div>
+      </td>
+    </tr>`;
+  });
+  updWO();
+}
+
+window.updateWO=(id, delta)=>{
+  let c=woSel[id]||0;
+  c+=delta;
+  if(c<0)c=0;
+  woSel[id]=c;
+  const inp=$(`wo-inp-${id}`);
+  if(inp) inp.value=c;
+  updWO();
+}
+window.updateWOInput=(id, val)=>{
+  let v=parseInt(val);
+  if(isNaN(v)) v=0;
+  if(v<0) v=0;
+  woSel[id]=v;
+  updWO();
+}
+window.updWO=()=>{const t=Object.values(woSel).reduce((s,q)=>s+q,0);$('selCnt').textContent=t;$('woBar').style.display=(t!==0)?'block':'none';}
+window.confirmWO=()=>{
+  const pt=$('woPoint').value,wh=$('woWh').value,t=Object.values(woSel).reduce((s,q)=>s+q,0);
+  if(!pt||t===0)return;if(!confirm(`Списать ${t}?`))return;
+  const op=Object.entries(woSel).map(([id,q])=>{const it=items.find(i=>i.id==id&&i.warehouse===wh);if(it)it.quantity-=parseFloat(q);return{name:it?.name,qty:parseFloat(q)};}).filter(x=>x.name);
+  saveLocal();mark();const p=points.find(x=>x.id==pt);history.unshift({id:Date.now(),date:new Date().toISOString(),pointId:pt,pointName:p.name,items:op,totalQty:t,warehouse:wh});saveLocal();
+  alert('✅ Списано');$('woBar').style.display='none';woSel={};$('woPoint').value='';renderWO();
+}
+
+window.renderHistory=()=>{
+  const c=$('hList');c.innerHTML='';
+  if(!history.length){c.innerHTML='<p style="color:#888;text-align:center;padding:16px">Пусто</p>';return;}
+  history.forEach(h=>{
+    const itms=h.items||[];
+    c.innerHTML+=`<div class="card"><div style="display:flex;justify-content:space-between"><b>${h.pointName||'-'}</b><span class="badge bg-warn">${h.totalQty}</span></div><div style="color:#666;font-size:.8rem">${new Date(h.date).toLocaleDateString()}</div></div>`;
+  });
+}
+window.closeModal=id=>$(id).classList.remove('open');
+
+async function sync(){
+  $('btnSync').textContent='⏳';
+  try{
+    if(changed){const r=await fetch(API,{method:'POST',body:JSON.stringify({items,points,history})});await r.json();await new Promise(r=>setTimeout(r,1500));}
+    const r=await fetch(API);const d=await r.json();
+    items=d.items||[];points=d.points||[];history=d.history||[];
+    saveLocal();renderStock();renderPoints();renderHistory();changed=false;alert('✅ Готово');
+  }catch(e){alert('Ошибка: '+e.message,1);}
+  finally{$('btnSync').textContent=changed?'⚠️':'🔄';$('btnSync').style.background=changed?'#ff9f0a':'rgba(255,255,255,.2)';}
+}
+$('btnSync').addEventListener('click',sync);
+
+items=JSON.parse(localStorage.getItem('sklad_items')||'[]');points=JSON.parse(localStorage.getItem('sklad_points')||'[]');history=JSON.parse(localStorage.getItem('sklad_hist')||'[]');
+renderStock();renderPoints();renderHistory();fillWOPoints();sync();
+</script>
+</body>
+</html>
